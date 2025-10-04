@@ -5,6 +5,7 @@ import { CountryList } from "./components/CountryList";
 import { WorldMap } from "./components/WorldMap";
 
 const MAX_TRIES = 3;
+const showList = false;
 
 function shuffle<T>(list: T[]): T[] {
   const a = [...list];
@@ -27,7 +28,7 @@ const App: React.FC = () => {
   const [selectedISO, setSelectedISO] = useState<string | null>(null);
   const [wrongISO, setWrongISO] = useState<string | null>(null);
 
-  const total = useMemo<number>(() => pool.length + placed.size + failed.size, [pool, placed, failed]);
+  const total = useMemo<number>(() => pool.length + placed.size, [pool, placed]);
 
   // Initialize tries for current pool
   useEffect(() => {
@@ -159,35 +160,37 @@ const App: React.FC = () => {
 
         <div className="flex flex-col md:flex-row gap-6">
           <div className="md:w-2/5 w-full">
-            <div className="bg-white rounded-2xl shadow p-4 mb-4">
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="font-medium">Configuration de la liste (JSON)</h2>
-                <div className="text-sm text-gray-500">{placed.size + failed.size}/{total}</div>
+              {showList && (
+              <div className="bg-white rounded-2xl shadow p-4 mb-4">
+                  <div className="flex items-center justify-between mb-3">
+                      <h2 className="font-medium">Configuration de la liste (JSON)</h2>
+                      <div className="text-sm text-gray-500">{placed.size + failed.size}/{total}</div>
+                  </div>
+                  <textarea
+                      value={jsonText}
+                      onChange={(e) => setJsonText(e.target.value)}
+                      className="w-full h-48 md:h-40 rounded-xl border border-gray-200 p-3 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      spellCheck={false}
+                  />
+                  {errorMsg && (
+                      <div className="mt-2 text-sm text-red-600">⚠️ {errorMsg}</div>
+                  )}
+                  <div className="mt-3 flex gap-2">
+                      <button
+                          onClick={applyJSON}
+                          className="px-3 py-2 rounded-xl bg-indigo-600 text-white text-sm hover:bg-indigo-700 active:scale-[.99]"
+                      >
+                          Charger la liste
+                      </button>
+                      <button
+                          onClick={handleReset}
+                          className="px-3 py-2 rounded-xl bg-gray-100 text-gray-800 text-sm hover:bg-gray-200 active:scale-[.99]"
+                      >
+                          Réinitialiser
+                      </button>
+                  </div>
               </div>
-              <textarea
-                value={jsonText}
-                onChange={(e) => setJsonText(e.target.value)}
-                className="w-full h-48 md:h-40 rounded-xl border border-gray-200 p-3 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                spellCheck={false}
-              />
-              {errorMsg && (
-                <div className="mt-2 text-sm text-red-600">⚠️ {errorMsg}</div>
               )}
-              <div className="mt-3 flex gap-2">
-                <button
-                  onClick={applyJSON}
-                  className="px-3 py-2 rounded-xl bg-indigo-600 text-white text-sm hover:bg-indigo-700 active:scale-[.99]"
-                >
-                  Charger la liste
-                </button>
-                <button
-                  onClick={handleReset}
-                  className="px-3 py-2 rounded-xl bg-gray-100 text-gray-800 text-sm hover:bg-gray-200 active:scale-[.99]"
-                >
-                  Réinitialiser
-                </button>
-              </div>
-            </div>
 
             <CountryList
               pool={pool}
@@ -212,10 +215,6 @@ const App: React.FC = () => {
               selectedISO={selectedISO}
               onCountryClick={onCountryClick}
             />
-
-            <div className="mt-3 text-sm text-gray-600">
-              Astuce : le JSON accepte les codes ISO A3 (ex. FRA, CHE, DEU).
-            </div>
           </div>
         </div>
       </div>
