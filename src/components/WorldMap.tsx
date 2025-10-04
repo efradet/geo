@@ -9,7 +9,7 @@ export interface WorldMapProps {
   onCountryClick: (isoA3: string) => void;
 }
 
-const WORLD_GEO_URL = "https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson" as const;
+const WORLD_GEO_URL = import.meta.env.BASE_URL + "/world.json";
 
 export const WorldMap: React.FC<WorldMapProps> = ({ placed, failed, wrongISO, selectedISO, onCountryClick }) => {
   return (
