@@ -23,7 +23,6 @@ export const WorldMap: React.FC<WorldMapProps> = ({ placed, failed, wrongISO, se
                 const isPlaced = placed.has(iso);
                 const isFailed = failed.has(iso);
                 const isWrong = wrongISO === iso;
-                const isSelectedTarget = selectedISO === iso;
                 return (
                   <Geography
                     key={geo.rsmKey}
