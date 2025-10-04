@@ -4,6 +4,8 @@ import { DEFAULT_COUNTRIES } from "./data/defaultCountries";
 import { CountryList } from "./components/CountryList";
 import { WorldMap } from "./components/WorldMap";
 
+const MAX_TRIES = 3;
+
 function shuffle<T>(list: T[]): T[] {
   const a = [...list];
   for (let i = a.length - 1; i > 0; i--) {
@@ -19,11 +21,24 @@ const App: React.FC = () => {
   );
   const [pool, setPool] = useState<CountryConfig[]>(DEFAULT_COUNTRIES);
   const [placed, setPlaced] = useState<Set<string>>(new Set());
+  const [failed, setFailed] = useState<Set<string>>(new Set());
+  const [tries, setTries] = useState<Record<string, number>>({});
   const [errorMsg, setErrorMsg] = useState<string>("");
   const [selectedISO, setSelectedISO] = useState<string | null>(null);
   const [wrongISO, setWrongISO] = useState<string | null>(null);
 
-  const total = useMemo<number>(() => pool.length + placed.size, [pool, placed]);
+  const total = useMemo<number>(() => pool.length + placed.size + failed.size, [pool, placed, failed]);
+
+  // Initialize tries for current pool
+  useEffect(() => {
+    setTries((prev) => {
+      const next: Record<string, number> = { ...prev };
+      for (const c of pool) {
+        if (next[c.isoA3] == null) next[c.isoA3] = 0;
+      }
+      return next;
+    });
+  }, [pool]);
 
   function applyJSON(): void {
     try {
@@ -57,6 +72,8 @@ const App: React.FC = () => {
 
       setPool(shuffle(withoutDup));
       setPlaced(new Set());
+      setFailed(new Set());
+      setTries(Object.fromEntries(withoutDup.map(c => [c.isoA3, 0])));
       setSelectedISO(null);
       setWrongISO(null);
       setErrorMsg("");
@@ -67,8 +84,11 @@ const App: React.FC = () => {
   }
 
   function handleReset(): void {
-    setPool(shuffle(DEFAULT_COUNTRIES));
+    const shuffled = shuffle(DEFAULT_COUNTRIES);
+    setPool(shuffled);
     setPlaced(new Set());
+    setFailed(new Set());
+    setTries(Object.fromEntries(shuffled.map(c => [c.isoA3, 0])));
     setJsonText(JSON.stringify(DEFAULT_COUNTRIES, null, 2));
     setSelectedISO(null);
     setWrongISO(null);
@@ -78,19 +98,34 @@ const App: React.FC = () => {
   function onCountryClick(targetISO: string): void {
     if (!selectedISO) return; // rien de sélectionné
     const isInPool = pool.some((p) => p.isoA3 === selectedISO);
-    if (selectedISO === targetISO && isInPool) {
+    if (!isInPool) return;
+
+    if (selectedISO === targetISO) {
       const nextPlaced = new Set(placed);
       nextPlaced.add(targetISO);
       setPlaced(nextPlaced);
       setPool((old) => old.filter((c) => c.isoA3 !== targetISO));
       setSelectedISO(null);
     } else {
+      // increment tries for selected country
+      setTries((prev) => {
+        const current = prev[selectedISO] ?? 0;
+        const nextCount = current + 1;
+        const next = { ...prev, [selectedISO]: nextCount };
+        // If reached MAX_TRIES, mark as failed and remove from pool
+        if (nextCount >= MAX_TRIES) {
+          setFailed((old) => new Set(old).add(selectedISO));
+          //setPool((old) => old.filter((c) => c.isoA3 !== selectedISO));
+          setSelectedISO(null);
+        }
+        return next;
+      });
       setWrongISO(targetISO);
       window.setTimeout(() => setWrongISO(null), 450);
     }
   }
 
-  const allDone = pool.length === 0 && placed.size > 0;
+  const allDone = pool.length === 0 && (placed.size > 0 || failed.size > 0);
   const [showCongrats, setShowCongrats] = useState<boolean>(false);
   useEffect(() => {
     if (allDone) {
@@ -103,25 +138,31 @@ const App: React.FC = () => {
   return (
     <div className="w-full min-h-screen bg-gray-50 text-gray-900">
       <div className="max-w-7xl mx-auto p-4 md:p-6 lg:p-8">
-        <h1 className="text-2xl md:text-3xl font-semibold tracking-tight mb-4">
+        <h1 className="text-2xl md:text-3xl font-semibold tracking-tight mb-2">
           Jeu : sélectionner un pays, puis cliquer sur la carte
         </h1>
-        <p className="text-sm md:text-base text-gray-600 mb-6">
-          1) Sélectionnez un pays dans la liste (à gauche). 2) Cliquez sur le pays correspondant sur la carte (à droite).
+        <p className="text-sm md:text-base text-gray-600 mb-4">
+          Chaque pays dispose de <b>{MAX_TRIES}</b> essais maximum. Au 3e échec, il est retiré de la liste (en orange sur la carte).
         </p>
 
         {showCongrats && (
           <div className="mb-4 rounded-xl bg-green-100 text-green-800 px-4 py-3 shadow">
-            🎉 Bravo — tous les pays de la liste ont été placés !
+            🎉 Terminé — placés: {placed.size} • ratés: {failed.size}
           </div>
         )}
+
+        <div className="flex items-center gap-3 text-sm text-gray-600 mb-4">
+          <span>À placer: <b>{pool.length}</b></span>
+          <span>Placés: <b>{placed.size}</b></span>
+          <span>Ratés: <b>{failed.size}</b></span>
+        </div>
 
         <div className="flex flex-col md:flex-row gap-6">
           <div className="md:w-2/5 w-full">
             <div className="bg-white rounded-2xl shadow p-4 mb-4">
               <div className="flex items-center justify-between mb-3">
                 <h2 className="font-medium">Configuration de la liste (JSON)</h2>
-                <div className="text-sm text-gray-500">{placed.size}/{total}</div>
+                <div className="text-sm text-gray-500">{placed.size + failed.size}/{total}</div>
               </div>
               <textarea
                 value={jsonText}
@@ -150,6 +191,8 @@ const App: React.FC = () => {
 
             <CountryList
               pool={pool}
+              tries={tries}
+              maxTries={MAX_TRIES}
               selectedISO={selectedISO}
               onSelect={(iso) => setSelectedISO(iso)}
               onClear={() => setSelectedISO(null)}
@@ -164,6 +207,7 @@ const App: React.FC = () => {
 
             <WorldMap
               placed={placed}
+              failed={failed}
               wrongISO={wrongISO}
               selectedISO={selectedISO}
               onCountryClick={onCountryClick}

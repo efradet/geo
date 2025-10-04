@@ -3,6 +3,7 @@ import { ComposableMap, Geographies, Geography, ZoomableGroup } from "react-simp
 
 export interface WorldMapProps {
   placed: Set<string>;
+  failed: Set<string>;
   wrongISO: string | null;
   selectedISO: string | null;
   onCountryClick: (isoA3: string) => void;
@@ -10,21 +11,17 @@ export interface WorldMapProps {
 
 const WORLD_GEO_URL = "https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson" as const;
 
-export const WorldMap: React.FC<WorldMapProps> = ({ placed, wrongISO, selectedISO, onCountryClick }) => {
+export const WorldMap: React.FC<WorldMapProps> = ({ placed, failed, wrongISO, selectedISO, onCountryClick }) => {
   return (
     <div className="w-full h-[520px] md:h-[620px]">
       <ComposableMap projectionConfig={{ scale: 150 }} className="w-full h-full">
         <ZoomableGroup zoom={1} center={[10, 20]}>
           <Geographies geography={WORLD_GEO_URL}>
-            {({ geographies }: { geographies: any[] }) => {
-              console.log('Total geographies loaded:', geographies.length);
-              if (geographies.length > 0) {
-                console.log('First geography properties:', geographies[0]?.properties);
-                console.log(geographies[0]?.properties?.name + " : "  + geographies[0]?.id);
-              }
+              {({ geographies }: { geographies: any[] }) => {
               return geographies.map((geo: any) => {
                 const iso = String(geo?.id || geo?.properties?.ISO_A3 || geo?.properties?.iso_a3 || geo?.properties?.ISO_A3_EH || geo?.properties?.ADM0_A3 || geo?.properties?.ISO_A2 || "");
                 const isPlaced = placed.has(iso);
+                const isFailed = failed.has(iso);
                 const isWrong = wrongISO === iso;
                 const isSelectedTarget = selectedISO === iso;
                 return (
@@ -36,6 +33,8 @@ export const WorldMap: React.FC<WorldMapProps> = ({ placed, wrongISO, selectedIS
                       default: {
                         fill: isPlaced
                           ? "#22c55e"
+                          : isFailed
+                          ? "#f59e0b"
                           : isWrong
                           ? "#ef4444"
                           : "#e5e7eb",
@@ -46,11 +45,11 @@ export const WorldMap: React.FC<WorldMapProps> = ({ placed, wrongISO, selectedIS
                         cursor: "pointer",
                       },
                       hover: {
-                        fill: isPlaced ? "#22c55e" : "#cbd5e1",
+                        fill: isPlaced ? "#22c55e" : isFailed ? "#fbbf24" : "#cbd5e1",
                         outline: "none",
                       },
                       pressed: {
-                        fill: isPlaced ? "#16a34a" : "#94a3b8",
+                        fill: isPlaced ? "#16a34a" : isFailed ? "#f59e0b" : "#94a3b8",
                         outline: "none",
                       },
                     }}

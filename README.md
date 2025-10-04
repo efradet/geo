@@ -1,9 +1,8 @@
-# Geo — Sélection puis Clic (Vite + React + TS)
+# Geo — Sélection + Clic, 3 essais max (Vite + React + TS)
 
-Interaction : **sélectionner un pays dans la liste**, puis **cliquer sur le pays sur la carte**.
-Si ça correspond, le pays devient vert et est retiré de la liste.
-
-## Démarrage
+- Sélectionnez un pays dans la liste
+- Cliquez le pays sur la carte
+- **3 essais maximum par pays** : au 3e échec, le pays est compté comme raté et retiré de la liste (coloré en orange sur la carte).
 
 ```bash
 npm install
